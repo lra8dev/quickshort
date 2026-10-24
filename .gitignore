@@ -12,8 +12,8 @@ node_modules/
 .env.production.local
 
 # Build output
-/build
-/dist
+build/
+dist/
 
 # Debug logs
 npm-debug.log*
