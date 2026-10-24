@@ -3,7 +3,7 @@ import { redirectUrl, shortenUrl } from "../controllers";
 
 const router = express.Router();
 
-router.post("/short", shortenUrl);
-router.get("/:shortId", redirectUrl);
+router.post("/", shortenUrl);
+router.get("/:id", redirectUrl);
 
 export default router;

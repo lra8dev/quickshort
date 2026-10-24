@@ -6,31 +6,52 @@ import validator from "validator";
 // Shorten URL with unique shortId
 export const shortenUrl = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
-  const { longUrl } = req.body;
+  const { longUrl } = req.body ?? {};
 
-  if (!validator.isURL(longUrl)) {
+  if (
+    typeof longUrl !== "string" ||
+    !validator.isURL(longUrl, {
+      protocols: ["http", "https"],
+      require_protocol: true,
+    })
+  ) {
     res.status(400).json({ message: "Invalid URL format" });
     return;
   }
 
-  let shortId = nanoid(7);
+  const serverApi = process.env.SERVER_API;
+  if (!serverApi) {
+    console.error("SERVER_API is not configured");
+    res.status(500).json({ message: "Server configuration error" });
+    return;
+  }
 
   try {
-    let existingUrl = await URL.findOne({ shortId });
-    while (existingUrl) {
-      shortId = nanoid(7);
-      existingUrl = await URL.findOne({ shortId });
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const shortId = nanoid(7);
+
+      try {
+        await URL.create({ shortId, longUrl });
+
+        res.status(201).json({
+          shortUrl: `${serverApi.replace(/\/+$/, "")}/api/url/${shortId}`,
+          message: "URL shortened successfully",
+        });
+        return;
+      } catch (error) {
+        const isDuplicateKeyError =
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === 11000;
+
+        if (!isDuplicateKeyError || attempt === 4) {
+          throw error;
+        }
+      }
     }
-
-    const newUrl = new URL({ shortId, longUrl });
-    await newUrl.save();
-
-    res.status(201).json({
-      shortUrl: `${process.env.SERVER_API!}/${shortId}`,
-      message: "URL shortened successfully",
-    });
   } catch (error) {
     console.error(JSON.stringify(error, null, 2));
     res.status(500).json({ message: "Server error" });
@@ -39,13 +60,13 @@ export const shortenUrl = async (
 
 // Redirect URL
 export const redirectUrl = async (req: Request, res: Response) => {
-  const { shortId } = req.params;
+  const { id } = req.params;
 
   try {
     const url = await URL.findOneAndUpdate(
-      { shortId },
+      { shortId: id },
       { $inc: { clicks: 1 } },
-      { new: true }
+      { new: true },
     );
 
     if (!url) {
