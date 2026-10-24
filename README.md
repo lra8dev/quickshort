@@ -111,6 +111,22 @@ PORT = 5000;
 pnpm dev
 ```
 
+#### 🔹 Deploy the Backend to Render
+
+Create a Render Web Service for this repository with these settings:
+
+- **Root Directory:** `server`
+- **Build Command:** `pnpm install --frozen-lockfile && pnpm build`
+- **Start Command:** `pnpm start`
+
+The service also requires these environment variables:
+
+- `MONGO_URI`
+- `CLIENT_API`
+- `SERVER_API`
+
+Render provides the `PORT` variable automatically. The server listens on it at runtime.
+
 ### 3️⃣ Frontend Setup (React.js)
 
 ```sh
